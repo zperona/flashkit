@@ -46,9 +46,10 @@
             // 
             // btn_rd_rom
             // 
-            this.btn_rd_rom.Location = new System.Drawing.Point(6, 19);
+            this.btn_rd_rom.Location = new System.Drawing.Point(8, 23);
+            this.btn_rd_rom.Margin = new System.Windows.Forms.Padding(4);
             this.btn_rd_rom.Name = "btn_rd_rom";
-            this.btn_rd_rom.Size = new System.Drawing.Size(205, 51);
+            this.btn_rd_rom.Size = new System.Drawing.Size(273, 63);
             this.btn_rd_rom.TabIndex = 0;
             this.btn_rd_rom.Text = "Read ROM";
             this.btn_rd_rom.UseVisualStyleBackColor = true;
@@ -58,9 +59,11 @@
             // 
             this.groupBox1.Controls.Add(this.btn_wr_rom);
             this.groupBox1.Controls.Add(this.btn_rd_rom);
-            this.groupBox1.Location = new System.Drawing.Point(12, 12);
+            this.groupBox1.Location = new System.Drawing.Point(16, 15);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(217, 144);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(4);
+            this.groupBox1.Size = new System.Drawing.Size(289, 177);
             this.groupBox1.TabIndex = 1;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "ROM";
@@ -68,9 +71,10 @@
             // 
             // btn_wr_rom
             // 
-            this.btn_wr_rom.Location = new System.Drawing.Point(6, 76);
+            this.btn_wr_rom.Location = new System.Drawing.Point(8, 94);
+            this.btn_wr_rom.Margin = new System.Windows.Forms.Padding(4);
             this.btn_wr_rom.Name = "btn_wr_rom";
-            this.btn_wr_rom.Size = new System.Drawing.Size(205, 51);
+            this.btn_wr_rom.Size = new System.Drawing.Size(273, 63);
             this.btn_wr_rom.TabIndex = 1;
             this.btn_wr_rom.Text = "Write ROM";
             this.btn_wr_rom.UseVisualStyleBackColor = true;
@@ -79,9 +83,10 @@
             // btn_check
             // 
             this.btn_check.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.btn_check.Location = new System.Drawing.Point(12, 312);
+            this.btn_check.Location = new System.Drawing.Point(16, 384);
+            this.btn_check.Margin = new System.Windows.Forms.Padding(4);
             this.btn_check.Name = "btn_check";
-            this.btn_check.Size = new System.Drawing.Size(217, 68);
+            this.btn_check.Size = new System.Drawing.Size(289, 84);
             this.btn_check.TabIndex = 4;
             this.btn_check.Text = "Cart info";
             this.btn_check.UseVisualStyleBackColor = false;
@@ -89,9 +94,10 @@
             // 
             // btn_wr_ram
             // 
-            this.btn_wr_ram.Location = new System.Drawing.Point(6, 76);
+            this.btn_wr_ram.Location = new System.Drawing.Point(8, 94);
+            this.btn_wr_ram.Margin = new System.Windows.Forms.Padding(4);
             this.btn_wr_ram.Name = "btn_wr_ram";
-            this.btn_wr_ram.Size = new System.Drawing.Size(205, 51);
+            this.btn_wr_ram.Size = new System.Drawing.Size(273, 63);
             this.btn_wr_ram.TabIndex = 3;
             this.btn_wr_ram.Text = "Write RAM";
             this.btn_wr_ram.UseVisualStyleBackColor = true;
@@ -99,9 +105,10 @@
             // 
             // btn_rd_ram
             // 
-            this.btn_rd_ram.Location = new System.Drawing.Point(6, 19);
+            this.btn_rd_ram.Location = new System.Drawing.Point(8, 23);
+            this.btn_rd_ram.Margin = new System.Windows.Forms.Padding(4);
             this.btn_rd_ram.Name = "btn_rd_ram";
-            this.btn_rd_ram.Size = new System.Drawing.Size(205, 51);
+            this.btn_rd_ram.Size = new System.Drawing.Size(273, 63);
             this.btn_rd_ram.TabIndex = 2;
             this.btn_rd_ram.Text = "Read RAM";
             this.btn_rd_ram.UseVisualStyleBackColor = true;
@@ -109,39 +116,43 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(12, 386);
+            this.progressBar1.Location = new System.Drawing.Point(16, 475);
+            this.progressBar1.Margin = new System.Windows.Forms.Padding(4);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(701, 56);
+            this.progressBar1.Size = new System.Drawing.Size(935, 69);
             this.progressBar1.TabIndex = 3;
             // 
             // consoleBox
             // 
             this.consoleBox.BackColor = System.Drawing.SystemColors.Control;
             this.consoleBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.consoleBox.Location = new System.Drawing.Point(239, 12);
+            this.consoleBox.Location = new System.Drawing.Point(319, 15);
+            this.consoleBox.Margin = new System.Windows.Forms.Padding(4);
             this.consoleBox.Multiline = true;
             this.consoleBox.Name = "consoleBox";
             this.consoleBox.ReadOnly = true;
             this.consoleBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.consoleBox.Size = new System.Drawing.Size(474, 368);
+            this.consoleBox.Size = new System.Drawing.Size(631, 452);
             this.consoleBox.TabIndex = 4;
             // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.btn_wr_ram);
             this.groupBox2.Controls.Add(this.btn_rd_ram);
-            this.groupBox2.Location = new System.Drawing.Point(12, 162);
+            this.groupBox2.Location = new System.Drawing.Point(16, 199);
+            this.groupBox2.Margin = new System.Windows.Forms.Padding(4);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(217, 144);
+            this.groupBox2.Padding = new System.Windows.Forms.Padding(4);
+            this.groupBox2.Size = new System.Drawing.Size(289, 177);
             this.groupBox2.TabIndex = 2;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "RAM";
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(725, 451);
+            this.ClientSize = new System.Drawing.Size(967, 555);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.btn_check);
             this.Controls.Add(this.consoleBox);
@@ -149,6 +160,7 @@
             this.Controls.Add(this.groupBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "Flashkit-md";

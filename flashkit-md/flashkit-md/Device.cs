@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO.Ports;
 
 namespace flashkit_md
 {
-    class Device
+    public class Device
     {
 
         const byte CMD_ADDR = 0;

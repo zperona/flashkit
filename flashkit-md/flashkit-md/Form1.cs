@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
-using System.Windows.Forms;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows.Forms;
 
 namespace flashkit_md
 {
@@ -30,21 +25,18 @@ namespace flashkit_md
 
         private void btn_check_Click(object sender, EventArgs e)
         {
-            consWriteLine("-----------------------------------------------------");
-            int ram_size;
-
-
-            try
+            using (DeviceSession ds = new DeviceSession())
             {
-                
-                Device.connect();
-                Device.setDelay(1);
+                consWriteLine("-----------------------------------------------------");
+                int ram_size;
+                if (!ds.IsConnected)
+                {
+                    consWriteLine("Device is not connected");
+                    return;
+                }
                 consWriteLine("Connected to: " + Device.getPortName());
-                
-              
-                
                 consWriteLine("ROM name : " + Cart.getRomName());
-                consWriteLine("ROM size : " + Cart.getRomSize() / 1024 + "K");
+                consWriteLine("ROM size : " + Cart.GetFullRomSize() / 1024 + "K");
                 ram_size = Cart.getRamSize();
                 if (ram_size < 1024)
                 {
@@ -54,29 +46,18 @@ namespace flashkit_md
                 {
                     consWriteLine("RAM size : " + ram_size / 1024 + "K");
                 }
-                
-                //consWrite("CART type: ");
-
-
-            }catch(Exception x){
-                
-                consWriteLine(x.Message);
+                ds.Dispose();
             }
-            Device.disconnect();
         }
-
         void consWrite(string str)
         {
             consoleBox.AppendText(str);
         }
 
-
         void consWriteLine(string str)
         {
             consoleBox.AppendText(str + "\r\n");
         }
-
-        
 
         private void btn_rd_ram_Click(object sender, EventArgs e)
         {
@@ -125,61 +106,49 @@ namespace flashkit_md
             Device.disconnect();
         }
 
- 
-
         private void btn_rd_rom_Click(object sender, EventArgs e)
         {
             try
             {
-
-                
-                byte[] rom;
-                int rom_size;
-                int block_size = 32768;
-                Device.connect();
-                Device.setDelay(1);
-                string rom_name = Cart.getRomName();
-                rom_name += ".bin";
-                saveFileDialog1.FileName = rom_name;
-                if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+                using (var session = new DeviceSession())
                 {
-                    consWriteLine("-----------------------------------------------------");
-                    rom_size = Cart.getRomSize();
-                    progressBar1.Value = 0;
-                    progressBar1.Maximum = rom_size;
-                    rom = new byte[rom_size];
-                    
-                    consWriteLine("Read ROM to " + saveFileDialog1.FileName);
-                    consWriteLine("ROM size : " + rom_size / 1024 + "K");
-
-                    Device.writeWord(0xA13000, 0x0000);
-                    Device.setAddr(0);
-                    DateTime t = DateTime.Now;
-                    for (int i = 0; i < rom_size; i += block_size)
+                    if (!session.IsConnected)
                     {
-                        Device.read(rom, i, block_size);
-                        progressBar1.Value = i;
-                        this.Update();
+                        consWriteLine("Device not detected.");
+                        return;
                     }
-                    progressBar1.Value = rom_size;
-                    int time = (int)(DateTime.Now.Ticks - t.Ticks);
-                   // consWriteLine("Time: " + time / 10000);
+                    session.SetDelay(1);
 
-                    FileStream f = File.OpenWrite(saveFileDialog1.FileName);
-                    f.Write(rom, 0, rom.Length);
-                    f.Close();
+                    string romName = Cart.getRomName() + ".bin";
+                    saveFileDialog1.FileName = romName;
+                    if (saveFileDialog1.ShowDialog() != DialogResult.OK) return;
 
-                    printMD5(rom);
+                    int romSize = Cart.GetFullRomSize();
+                    consWriteLine($"ROM size: {romSize / 1024} KB");
 
-                    consWriteLine("OK");
+                    var flashHelpers = new MX29GL128Helpers(session, consWriteLine);
+
+                    progressBar1.Value = 0;
+                    progressBar1.Maximum = romSize;
+
+                    flashHelpers.ReadRom(saveFileDialog1.FileName, romSize, consWriteLine, addr =>
+                    {
+                        progressBar1.Value = Math.Min(progressBar1.Maximum, addr);
+                        this.Update();
+                    });
+
+                    consWriteLine("ROM read successfully.");
                 }
-
             }
-            catch (Exception x)
+            catch (Exception ex)
             {
-                consWriteLine(x.Message);
+                consWriteLine("Error: " + ex.Message);
             }
-            Device.disconnect();
+            finally
+            {
+                Device.disconnect();
+                progressBar1.Value = 0;
+            }
         }
 
         private void printMD5(byte []buff)
@@ -189,7 +158,6 @@ namespace flashkit_md
             consWriteLine("MD5: " + BitConverter.ToString(hash_data));
         }
         
-
         private void btn_wr_ram_Click(object sender, EventArgs e)
         {
             try
@@ -248,125 +216,82 @@ namespace flashkit_md
             Device.disconnect();
         }
 
-
         private void btn_wr_rom_Click(object sender, EventArgs e)
         {
-
             try
             {
-                byte[] rom;
-                int rom_size;
-                int block_len = 4096;
-                Device.connect();
-                Device.setDelay(0);
+                openFileDialog1.Filter = "MD or BIN Files (*.md;*.bin)|*.md;*.bin|All Files (*.*)|*.*";
 
-                if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                if (openFileDialog1.ShowDialog() != DialogResult.OK)
+                    return;
+
+                byte[] rom = File.ReadAllBytes(openFileDialog1.FileName);
+
+                int romSize = rom.Length;
+                if (romSize % 0x20000 != 0)
+                    romSize = (romSize / 0x20000 + 1) * 0x20000;
+               
+                Array.Resize(ref rom, romSize);
+
+                consWriteLine($"ROM size: {romSize / 1024} KB");
+
+                using (var session = new DeviceSession())
                 {
-                    consWriteLine("-----------------------------------------------------");
-                    FileStream f = File.OpenRead(openFileDialog1.FileName);
-                    rom_size = (int)f.Length;
-                    if (rom_size % 65536 != 0) rom_size = rom_size / 65536 * 65536 + 65536;
-                    if (rom_size > 0x400000) rom_size = 0x400000;
-                    rom = new byte[rom_size];
-                    f.Read(rom, 0, rom_size);
-                    f.Close();
+                    if (!session.IsConnected)
+                    {
+                        consWriteLine("Device not detected.");
+                        return;
+                    }
 
-                    initOpenED(rom);
+                    // Create helpers and pass logging callback
+                    var flashHelpers = new MX29GL128Helpers(session, consWriteLine);
 
                     progressBar1.Value = 0;
-                    progressBar1.Maximum = rom_size;
-                    consWriteLine("Flash erase...");
-                    Device.flashResetByPass();
+                    progressBar1.Maximum = romSize;
 
-                    
-                    for (int i = 0; i < rom_size; i += 65536)
+                    // --- ERASE ---
+                    consWriteLine("Flash reset + unlock...");
+                    session.FlashResetByPass();
+                    session.FlashUnlockBypass();
+
+                    consWriteLine("Erasing sectors...");
+                    flashHelpers.EraseAllSectors(consWriteLine, session);
+
+                    // --- WRITE ---
+                    consWriteLine("Writing ROM...");
+                    DateTime t0 = DateTime.Now;
+
+                    flashHelpers.WriteROM(rom, consWriteLine, session, addr =>
                     {
-                        Device.flashErase(i);
-                        progressBar1.Value = i;
+                        progressBar1.Value = Math.Min(progressBar1.Maximum, addr);
                         this.Update();
-                    }
+                    });
 
-                    progressBar1.Value = 0;
+                    session.FlashResetByPass();
+                    double sec = (DateTime.Now - t0).TotalSeconds;
+                    consWriteLine($"Write completed in {sec:F1} sec");
 
-                    consWriteLine("Flash write...");
-
-                    Device.flashUnlockBypass();
-                    Device.setAddr(0);
-                    DateTime t = DateTime.Now;
-                    for (int i = 0; i < rom_size; i += block_len)
+                    // --- VERIFY ---
+                    consWriteLine("Verifying ROM...");
+                    flashHelpers.VerifyROM(rom, consWriteLine, session, addr =>
                     {
-                        Device.flashWrite(rom, i, block_len);
-                        progressBar1.Value = i;
+                        progressBar1.Value = Math.Min(progressBar1.Maximum, addr);
                         this.Update();
-                    }
-                    int time = (int)(DateTime.Now.Ticks - t.Ticks);
-                    //consWriteLine("Time: " + time / 10000);
-                    progressBar1.Value = 0;
-                    Device.flashResetByPass();
+                    });
 
-                    consWriteLine("Flash verify...");
-                    byte[] rom2 = new byte[rom.Length];
-
-                    Device.setAddr(0);
-                    for (int i = 0; i < rom_size; i += block_len)
-                    {
-                        Device.read(rom2, i, block_len);
-                        progressBar1.Value = i;
-                        this.Update();
-                    }
-                    progressBar1.Value = rom_size;
-                    for (int i = 0; i < rom_size; i++)
-                    {
-                        if (rom[i] != rom2[i]) throw new Exception("Verify error at " + i);
-                    }
-
-                    consWriteLine("OK");
+                    progressBar1.Value = romSize;
+                    consWriteLine("ROM write complete.");
                 }
             }
-            catch (Exception x)
+            catch (Exception ex)
             {
-                try
-                {
-                    Device.flashResetByPass();
-                }
-                catch (Exception) { }
-                consWriteLine(x.Message);
+                consWriteLine("Error: " + ex.Message);
             }
-            Device.disconnect();
-        }
-
-        //*********************************************************************************** OPEN-ED stuff
-        void initOpenED(byte [] rom)
-        {
-            string open_ed = "OPEN-EVERDRIVE";
-
-            for (int i = 0; i < open_ed.Length; i++)
+            finally
             {
-                if (rom[0x120 + i] != open_ed.ToCharArray()[i]) return;
+                progressBar1.Value = 0;
             }
-
-            Device.writeWord(0xA130E0, 0x0404);//Open-ED init rom bank
-
-            applyDate(rom, 0x1c8, DateTime.Now);
         }
 
-        static void applyDate(byte[] buff, int offset, DateTime date_time)
-        {
-            UInt16 date;
-            UInt16 time;
-            //DateTime date_time = DateTime.Now;
-
-            date = (UInt16)(date_time.Day | (date_time.Month << 5) | (date_time.Year - 1980 << 9));
-            time = (UInt16)((date_time.Second / 2 | (date_time.Hour << 11) | (date_time.Minute << 5)));
-
-            applyShort(buff, offset, date);
-            applyShort(buff, offset + 2, time);
-        }
-
-        static void applyShort(byte[] buff, int offset, int val)
-        {
-            buff[offset + 0] = (byte)(val >> 0);
-            buff[offset + 1] = (byte)(val >> 8);
-        }
     }
 }
