@@ -36,7 +36,7 @@ namespace flashkit_md
                 }
                 consWriteLine("Connected to: " + Device.getPortName());
                 consWriteLine("ROM name : " + Cart.getRomName());
-                consWriteLine("ROM size : " + Cart.GetFullRomSize() / 1024 + "K");
+                consWriteLine("ROM size : " + Cart.GetRomSize() / 1024 + "K");
                 ram_size = Cart.getRamSize();
                 if (ram_size < 1024)
                 {
@@ -123,7 +123,7 @@ namespace flashkit_md
                     saveFileDialog1.FileName = romName;
                     if (saveFileDialog1.ShowDialog() != DialogResult.OK) return;
 
-                    int romSize = Cart.GetFullRomSize();
+                    int romSize = Cart.GetRomSize();
                     consWriteLine($"ROM size: {romSize / 1024} KB");
 
                     var flashHelpers = new MX29GL128Helpers(session, consWriteLine);

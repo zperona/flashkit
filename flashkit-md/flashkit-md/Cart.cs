@@ -81,13 +81,6 @@ namespace flashkit_md
             }
         }
 
-        // Get the page mapped to given bank (0..7).
-        public static byte GetBankPage(int bankIndex)
-        {
-            if (bankIndex < 0 || bankIndex >= BankCount) throw new ArgumentOutOfRangeException(nameof(bankIndex));
-            return bankPages[bankIndex];
-        }
-
         // Set a page into a given bank (bank 1..7). Bank 0 is fixed and cannot be changed.
         // This writes to the corresponding hardware register and updates internal state.
         public static void SetBankPage(int bankIndex, byte page)
@@ -101,56 +94,6 @@ namespace flashkit_md
             WriteRegisterByte(regAddr, page);
             bankPages[bankIndex] = page;
         }
-
-        // Write all current bankPages[] values back to the hardware registers (except bank 0).
-        public static void ApplyBanksToDevice()
-        {
-            for (int b = 1; b < BankCount; b++)
-            {
-                int regAddr = BankRegisterAddrs[b];
-                if (regAddr == 0) continue;
-                WriteRegisterByte(regAddr, bankPages[b]);
-            }
-        }
-
-        // Helper: compute the ROM byte offset of a given page.
-        public static long PageToOffset(byte page)
-        {
-            return (long)page * PageSize;
-        }
-
-        // Helper: compute the console-visible address range for a bank.
-        public static (int start, int end) BankAddressRange(int bankIndex)
-        {
-            if (bankIndex < 0 || bankIndex >= BankCount) throw new ArgumentOutOfRangeException(nameof(bankIndex));
-            int start = bankIndex * PageSize;
-            int end = start + PageSize - 1;
-            return (start, end);
-        }
-
-        // Read a block of registers from the A13000 range (or any range) for inspection.
-        // startAddr and length are byte-addressed.
-        public static byte[] ReadRegistersRange(int startAddr, int length)
-        {
-            if (length <= 0) return new byte[0];
-
-            // align start to even boundary
-            int alignedStart = startAddr & ~1;
-            int extra = startAddr - alignedStart;
-            int readLen = length + extra;
-
-            // ensure readLen is even (Device.read works with any byte length; setAddr alignment is handled)
-            Device.setAddr(alignedStart);
-            byte[] buf = new byte[readLen];
-            Device.read(buf, 0, buf.Length);
-
-            // return the requested slice
-            byte[] outBuf = new byte[length];
-            Array.Copy(buf, extra, outBuf, 0, length);
-            return outBuf;
-        }
-
-        // Existing methods below remain unchanged but can use bank helper methods if needed.
 
         static string getRomRegion(byte[] rom_hdr)
         {
@@ -246,131 +189,71 @@ namespace flashkit_md
             return name;
         }
 
-        static int checkRomSize(int base_addr, int max_len)
+        public static int GetRomSize()
         {
-            int eq;
-            int base_len = 0x8000;
-            int len = 0x8000;
-            byte[] sector0 = new byte[256];
-            byte[] sector = new byte[256];
-            Device.writeWord(0xA13000, 0x0000);
+            const int BankWindow = 0x080000; // 512KB
+            const int MaxBanks = 16;         // 8MB mapped by the CPLD / 512KB
+            byte[] buf = new byte[512];
 
-            Device.setAddr(base_addr);
-            Device.read(sector0, 0, sector.Length);
+            int lastNonBlankBank = -1;
 
-            for (; ; )
+            // Step 1: Find last non-blank bank
+            for (int bank = 0; bank < MaxBanks; bank++)
             {
+                if (bank == 0)
+                {
+                    Device.setAddr(0x000000);
+                }
+                else
+                {
+                    SetBankPage(1, (byte)bank);
+                    Device.setAddr(BankWindow);
+                }
 
-                Device.setAddr(base_addr + len);
-                Device.read(sector, 0, sector.Length);
-
-                eq = 1;
-                for (int i = 0; i < sector.Length; i++) if (sector0[i] != sector[i]) eq = 0;
-                if (eq == 1) break;
-
-                len *= 2;
-                if (len >= max_len) break;
-            }
-
-            if (len == base_len) return 0;
-            return len;
-        }
-
-        public static int GetFullRomSize()
-        {
-            // Try to detect the number of pages by probing each page for unique data.
-            // If you know the max is always 16, you can just return 16 * PageSize.
-            int maxPages = 16;
-            int detectedPages = 1;
-
-            byte[] buf0 = new byte[16];
-            byte[] buf = new byte[16];
-
-            // Read the first 16 bytes of page 0 as reference
-            Device.writeWord(0xA13000, 0x0000); // Set banks to default
-            Device.setAddr(0x000000);
-            Device.read(buf0, 0, buf0.Length);
-
-            for (int page = 1; page < maxPages; page++)
-            {
-                // Map page into bank 1 (bank 0 is always page 0)
-                SetBankPage(1, (byte)page);
-                Device.setAddr(0x080000); // Bank 1 address
                 Device.read(buf, 0, buf.Length);
 
-                bool different = false;
+                bool allFF = true;
                 for (int i = 0; i < buf.Length; i++)
                 {
-                    if (buf[i] != buf0[i])
+                    if (buf[i] != 0xFF)
                     {
-                        different = true;
+                        allFF = false;
                         break;
                     }
                 }
-                if (different)
-                    detectedPages = page + 1;
-                else
+
+                if (!allFF)
+                    lastNonBlankBank = bank;
+            }
+
+            if (lastNonBlankBank < 0)
+                return 0; // no ROM found at all
+
+            // Step 2: Scan the last bank fully to find the last non-0xFF
+            byte[] fullBank = new byte[BankWindow];
+            if (lastNonBlankBank == 0)
+            {
+                Device.setAddr(0x000000);
+            }
+            else
+            {
+                SetBankPage(1, (byte)lastNonBlankBank);
+                Device.setAddr(BankWindow);
+            }
+            Device.read(fullBank, 0, fullBank.Length);
+
+            int lastUsedOffset = 0;
+            for (int i = fullBank.Length - 1; i >= 0; i--)
+            {
+                if (fullBank[i] != 0xFF)
+                {
+                    lastUsedOffset = i + 1;
                     break;
-            }
-
-            // Restore bank 1 to page 1 (or 0 if you want to be safe)
-            SetBankPage(1, 1);
-
-            return detectedPages * PageSize;
-        }
-
-        public static int getRomSize()
-        {
-
-
-            byte[] sector0 = new byte[512];
-            byte[] sector = new byte[512];
-            int ram = 0;
-            int extra_rom = 0;
-
-            if (ramAvailable())
-            {
-                ram = 1;
-                extra_rom = 1;
-                Device.writeWord(0xA13000, 0x0000);
-                Device.setAddr(0x200000);
-                Device.read(sector0, 0, 512);
-                Device.setAddr(0x200000);
-                Device.read(sector, 0, 512);
-                for (int i = 0; i < sector.Length; i++) if (sector[i] != sector0[i]) extra_rom = 0;
-
-                if (extra_rom != 0)
-                {
-                    extra_rom = 0;
-                    Device.setAddr(0x200000 + 0x10000);
-                    Device.read(sector, 0, 512);
-
-                    Device.writeWord(0xA13000, 0xffff);
-                    Device.setAddr(0x200000);
-                    Device.read(sector, 0, 512);
-                    for (int i = 0; i < sector.Length; i++) if (sector[i] != sector0[i]) extra_rom = 1;
-
                 }
-
             }
 
-            int max_rom_size = ram != 0 && extra_rom == 0 ? 0x200000 : 0x400000;
-            int len = checkRomSize(0, max_rom_size);
-
-            if (len == 0x400000)
-            {
-                len = 0x200000;
-                int len2 = checkRomSize(0x200000, 0x200000);
-                if (len2 == 0x200000)
-                {
-                    len2 = checkRomSize(0x300000, 0x100000);
-                    len2 = len2 >= 0x80000 ? 0x200000 : 0x100000;
-                }
-                if (len2 >= 0x80000) len += len2;
-            }
-
-            return len;
-
+            int romSize = lastNonBlankBank * BankWindow + lastUsedOffset;
+            return romSize;
         }
 
         static bool ramAvailable()
