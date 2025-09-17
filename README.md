@@ -17,3 +17,4 @@ Notes
 This fork is focused on bootleg cartridges only, and functionality may be limited to MX29GL128E hardware.
 
 Smaller ROMs will still be padded to the bank window size unless trimmed.
+![cf42665e-5744-421b-99d2-1a78bbc4e89d](https://github.com/user-attachments/assets/5c20805d-1d70-45f7-9055-f4ca223ac82e)
